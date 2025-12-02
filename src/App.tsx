@@ -26,24 +26,11 @@ const getDaysUntilExpiry = (expiryDate: string): number => {
 const App: React.FC = () => {
   const { user, loading: authLoading, signOut } = useAuth();
   
+  // --- ALL HOOKS MUST BE CALLED FIRST (before any conditional returns) ---
   // --- UI State ---
   const [activeTab, setActiveTab] = useState<'dashboard' | 'intake' | 'inventory' | 'reports' | 'settings'>('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true); // Global loading state
-
-  // Show login if not authenticated
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center text-slate-400">
-        <Loader2 size={48} className="animate-spin text-blue-600 mb-4" />
-        <p className="font-medium text-slate-600">Loading...</p>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Login />;
-  }
   
   // --- Data State ---
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -51,8 +38,13 @@ const App: React.FC = () => {
   const [storeProfile, setStoreProfile] = useState<StoreProfileType>(DEFAULT_STORE_PROFILE);
   const [alertSettings] = useState<AlertSetting[]>(DEFAULT_ALERT_SETTINGS);
 
-  // --- Initial Data Load ---
+  // --- Initial Data Load (only when user is logged in) ---
   useEffect(() => {
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+
     const initData = async () => {
       setIsLoading(true);
       try {
@@ -72,10 +64,11 @@ const App: React.FC = () => {
     };
 
     initData();
-  }, []);
+  }, [user]);
 
   // --- Computed Data ---
   const enrichedBatches: BatchWithProduct[] = useMemo(() => {
+    if (!user) return [];
     return batches.map(batch => {
       const product = products.find(p => p.barcode === batch.barcode);
       return {
@@ -86,7 +79,22 @@ const App: React.FC = () => {
         daysUntilExpiry: getDaysUntilExpiry(batch.expiryDate),
       };
     }).filter(b => b.status === 'active');
-  }, [batches, products]);
+  }, [batches, products, user]);
+
+  // --- NOW we can do conditional returns (after all hooks) ---
+  // Show login if not authenticated
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center text-slate-400">
+        <Loader2 size={48} className="animate-spin text-blue-600 mb-4" />
+        <p className="font-medium text-slate-600">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
 
   // --- Handlers (Async) ---
 
