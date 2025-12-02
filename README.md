@@ -22,9 +22,12 @@ A React + TypeScript app for managing product expiry dates and inventory with AI
 2. **Set up environment variables:**
    Create a `.env` file in the root directory:
    ```env
-   VITE_GEMINI_API_KEY=your_gemini_api_key
+   # Server-side only (for API routes) - NOT exposed to frontend
+   GEMINI_API_KEY=your_gemini_api_key
+   
+   # Frontend variables (safe to expose - protected by RLS)
    VITE_SUPABASE_URL=your_supabase_url
-   VITE_SUPABASE_KEY=your_supabase_key
+   VITE_SUPABASE_KEY=your_supabase_anon_key
    ```
 
 3. **Run the app:**
@@ -58,10 +61,16 @@ See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed instructions for Vercel, Rende
 
 ## Environment Variables
 
-Required environment variables:
-- `VITE_GEMINI_API_KEY` - Google Gemini API key for AI features
+**Required environment variables:**
+
+**Server-side (API routes) - NOT exposed to frontend:**
+- `GEMINI_API_KEY` - Google Gemini API key for AI features (kept secure on server)
+
+**Frontend (safe to expose - protected by RLS):**
 - `VITE_SUPABASE_URL` - Your Supabase project URL
-- `VITE_SUPABASE_KEY` - Your Supabase anon key
+- `VITE_SUPABASE_KEY` - Your Supabase anon key (designed for frontend use)
+
+> **Security Note:** The Gemini API key is now protected via serverless API routes. It never reaches the frontend code, preventing API key theft.
 
 ## Database Setup
 

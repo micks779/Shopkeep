@@ -17,7 +17,6 @@ import {
   Home,
   Search
 } from 'lucide-react';
-import { GoogleGenAI, Type } from "@google/genai";
 
 interface DashboardProps {
   batches: BatchWithProduct[];
@@ -63,30 +62,20 @@ const Dashboard: React.FC<DashboardProps> = ({ batches, alertSettings, onNavigat
 
     setBundleLoading(true);
     try {
-        const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
-        const isBundle = uniqueItems.length > 1;
-        const promptItems = uniqueItems.slice(0, 12).join(', ');
-        
-        const prompt = isBundle 
-            ? `I have a convenience store. These items are expiring soon: ${promptItems}. Suggest a creative "Bundle Deal" name and a short 1-sentence marketing hook.`
-            : `I have a convenience store. This item is expiring soon: ${promptItems}. Suggest a creative "Flash Sale" name and a short 1-sentence marketing hook.`;
-
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        title: { type: Type.STRING },
-                        tagline: { type: Type.STRING }
-                    },
-                    required: ["title", "tagline"]
-                }
-            }
+        // Call secure API route instead of direct Gemini API
+        const response = await fetch('/api/gemini-bundle-idea', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                items: uniqueItems.slice(0, 12)
+            })
         });
-        const result = JSON.parse(response.text);
+
+        if (!response.ok) {
+            throw new Error('Failed to generate bundle idea');
+        }
+
+        const result = await response.json();
         setBundleSuggestion({ title: result.title, tagline: result.tagline });
     } catch (e) {
         setBundleSuggestion({ title: "Clearance Sale", tagline: "Grab these items at a discount before they're gone!" });

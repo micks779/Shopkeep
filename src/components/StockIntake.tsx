@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Product, Batch, Category } from '../types';
 import { ScanLine, Plus, Camera, X, Loader2, Calendar as CalendarIcon, Hash } from 'lucide-react';
-import { GoogleGenAI, Type } from "@google/genai";
 
 interface StockIntakeProps {
   products: Product[];
@@ -136,31 +135,21 @@ const StockIntake: React.FC<StockIntakeProps> = ({ products, onAddBatch }) => {
       const base64Image = canvasRef.current.toDataURL('image/jpeg').split(',')[1];
       
       try {
-        const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
-        const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: {
-            parts: [
-              { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
-              { text: "Analyze this retail product image. Extract the Barcode (numbers), the Expiry Date (YYYY-MM-DD), the Product Name, and Category. If you can't clearly see the date, estimate or leave null." }
-            ]
-          },
-          config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: {
-                barcode: { type: Type.STRING },
-                expiryDate: { type: Type.STRING },
-                productName: { type: Type.STRING },
-                category: { type: Type.STRING, enum: Object.values(Category) },
-              },
-              required: ["barcode"]
-            }
-          }
+        // Call secure API route instead of direct Gemini API
+        const response = await fetch('/api/gemini-analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageData: base64Image,
+            mimeType: 'image/jpeg'
+          })
         });
 
-        const result = JSON.parse(response.text);
+        if (!response.ok) {
+          throw new Error('Failed to analyze image');
+        }
+
+        const result = await response.json();
         
         if (result.barcode) {
           setBarcode(result.barcode);

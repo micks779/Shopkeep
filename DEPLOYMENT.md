@@ -26,9 +26,9 @@ Deploy your app to production with HTTPS (camera will work!) 🚀
    - Go to your project on [vercel.com](https://vercel.com)
    - Settings → Environment Variables
    - Add these:
-     - `VITE_GEMINI_API_KEY` = your Gemini API key
+     - `GEMINI_API_KEY` = your Gemini API key (server-side, no VITE_ prefix)
      - `VITE_SUPABASE_URL` = your Supabase URL
-     - `VITE_SUPABASE_KEY` = your Supabase key
+     - `VITE_SUPABASE_KEY` = your Supabase anon key
 
 5. **Redeploy:**
    - After adding env vars, go to Deployments → Redeploy
@@ -70,9 +70,11 @@ Deploy your app to production with HTTPS (camera will work!) 🚀
 4. **Add Environment Variables:**
    - In the dashboard, go to Environment
    - Add:
-     - `VITE_GEMINI_API_KEY`
+     - `GEMINI_API_KEY` (server-side - requires serverless functions support)
      - `VITE_SUPABASE_URL`
      - `VITE_SUPABASE_KEY`
+   
+   **Note:** Render Static Sites don't support serverless functions. For full security, use Vercel which supports API routes.
 
 5. **Deploy!**
 
@@ -106,15 +108,18 @@ Deploy your app to production with HTTPS (camera will work!) 🚀
 
 ## Environment Variables Needed
 
-Make sure to add these in your hosting platform:
+### For Vercel (Recommended - Full Security):
 
 ```
-VITE_GEMINI_API_KEY=your_key_here
-VITE_SUPABASE_URL=your_url_here
-VITE_SUPABASE_KEY=your_key_here
+GEMINI_API_KEY=your_key_here          # Server-side only (not exposed to frontend)
+VITE_SUPABASE_URL=your_url_here        # Frontend (safe - protected by RLS)
+VITE_SUPABASE_KEY=your_anon_key_here  # Frontend (safe - protected by RLS)
 ```
 
-**Important:** All variables must start with `VITE_` for Vite to expose them!
+**Important:** 
+- `GEMINI_API_KEY` does NOT have `VITE_` prefix (server-side only)
+- `VITE_*` variables are exposed to frontend (only use for safe keys)
+- See [SECURITY.md](./SECURITY.md) for security details
 
 ---
 

@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { BatchWithProduct, Batch, Category, AlertSetting } from '../types';
 import { Filter, AlertCircle, Trash2, Tag, CheckCircle, Sparkles, Loader2, X, Store } from 'lucide-react';
-import { GoogleGenAI, Type } from "@google/genai";
 
 interface InventoryListProps {
   batches: BatchWithProduct[];
@@ -63,28 +62,23 @@ const InventoryList: React.FC<InventoryListProps> = ({ batches, onUpdateStatus, 
     setAiSuggestion(null);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: `Product: ${batch.productName}
-                   Original Price: £${batch.price}
-                   Days until expiry: ${batch.daysUntilExpiry}
-                   Category: ${batch.category}
-                   
-                   Suggest a clearance price to ensure it sells before expiry. Return JSON: { "suggestedPrice": number, "reasoning": string }`,
-        config: {
-           responseMimeType: "application/json",
-           responseSchema: {
-               type: Type.OBJECT,
-               properties: {
-                   suggestedPrice: { type: Type.NUMBER },
-                   reasoning: { type: Type.STRING }
-               }
-           }
-        }
+      // Call secure API route instead of direct Gemini API
+      const response = await fetch('/api/gemini-price-suggestion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productName: batch.productName,
+          price: batch.price,
+          daysUntilExpiry: batch.daysUntilExpiry,
+          category: batch.category
+        })
       });
-      
-      const result = JSON.parse(response.text);
+
+      if (!response.ok) {
+        throw new Error('Failed to get price suggestion');
+      }
+
+      const result = await response.json();
       setAiSuggestion({
           price: result.suggestedPrice,
           reason: result.reasoning
