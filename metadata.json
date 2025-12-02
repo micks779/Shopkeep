@@ -1,0 +1,7 @@
+{
+  "name": "ShopKeep Expiry",
+  "description": "A smart expiry-tracking system for UK convenience stores to reduce waste and manage stock intake.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
