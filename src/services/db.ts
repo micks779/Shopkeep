@@ -10,11 +10,23 @@ const USE_REAL_BACKEND = true;
 // SIMULATED LATENCY (ms) - Makes the app feel like it has a real server
 const LATENCY = 600;
 
+// Helper to get current user ID
+const getCurrentUserId = async (): Promise<string | null> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  return user?.id || null;
+};
+
 export const db = {
   // --- PRODUCTS ---
   getProducts: async (): Promise<Product[]> => {
     if (USE_REAL_BACKEND) {
-      const { data, error } = await supabase.from('products').select('*');
+      const userId = await getCurrentUserId();
+      if (!userId) throw new Error('User not authenticated');
+      
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('user_id', userId);
       if (error) throw error;
       return data || [];
     }
@@ -27,7 +39,12 @@ export const db = {
 
   saveProduct: async (product: Product): Promise<void> => {
     if (USE_REAL_BACKEND) {
-      const { error } = await supabase.from('products').upsert(product);
+      const userId = await getCurrentUserId();
+      if (!userId) throw new Error('User not authenticated');
+      
+      const { error } = await supabase
+        .from('products')
+        .upsert({ ...product, user_id: userId });
       if (error) throw error;
       return;
     }
@@ -44,7 +61,13 @@ export const db = {
   // --- BATCHES (INVENTORY) ---
   getBatches: async (): Promise<Batch[]> => {
     if (USE_REAL_BACKEND) {
-        const { data, error } = await supabase.from('batches').select('*');
+        const userId = await getCurrentUserId();
+        if (!userId) throw new Error('User not authenticated');
+        
+        const { data, error } = await supabase
+          .from('batches')
+          .select('*')
+          .eq('user_id', userId);
         if (error) throw error;
         if (!data) return [];
         
@@ -66,6 +89,9 @@ export const db = {
 
   addBatch: async (batch: Batch): Promise<void> => {
     if (USE_REAL_BACKEND) {
+        const userId = await getCurrentUserId();
+        if (!userId) throw new Error('User not authenticated');
+        
         // Convert camelCase to snake_case for database
         const dbBatch = {
           id: batch.id,
@@ -73,7 +99,8 @@ export const db = {
           expiry_date: batch.expiryDate,
           quantity: batch.quantity,
           status: batch.status,
-          added_date: batch.addedDate
+          added_date: batch.addedDate,
+          user_id: userId
         };
         const { error } = await supabase.from('batches').insert(dbBatch);
         if (error) throw error;
@@ -87,7 +114,14 @@ export const db = {
 
   updateBatchStatus: async (id: string, status: Batch['status']): Promise<void> => {
      if (USE_REAL_BACKEND) {
-        const { error } = await supabase.from('batches').update({ status }).eq('id', id);
+        const userId = await getCurrentUserId();
+        if (!userId) throw new Error('User not authenticated');
+        
+        const { error } = await supabase
+          .from('batches')
+          .update({ status })
+          .eq('id', id)
+          .eq('user_id', userId); // Ensure user can only update their own batches
         if (error) throw error;
         return;
      }
@@ -101,7 +135,14 @@ export const db = {
   // --- PROFILE ---
   getProfile: async (): Promise<StoreProfile> => {
     if (USE_REAL_BACKEND) {
-      const { data, error } = await supabase.from('store_profile').select('*').single();
+      const userId = await getCurrentUserId();
+      if (!userId) throw new Error('User not authenticated');
+      
+      const { data, error } = await supabase
+        .from('store_profile')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
       if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows returned
       if (!data) return DEFAULT_STORE_PROFILE;
       
@@ -124,9 +165,13 @@ export const db = {
 
   saveProfile: async (profile: StoreProfile): Promise<void> => {
     if (USE_REAL_BACKEND) {
+      const userId = await getCurrentUserId();
+      if (!userId) throw new Error('User not authenticated');
+      
       // Convert camelCase to snake_case for database
       const dbProfile = {
-        id: 'default',
+        id: userId, // Use user_id as the id (one profile per user)
+        user_id: userId,
         store_name: profile.storeName,
         owner_name: profile.ownerName,
         email: profile.email,
