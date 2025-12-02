@@ -1,9 +1,11 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { LayoutDashboard, ScanLine, List, FileBarChart, Menu, X, Bell, Loader2, Settings } from 'lucide-react';
+import { LayoutDashboard, ScanLine, List, FileBarChart, Menu, X, Bell, Loader2, Settings, LogOut } from 'lucide-react';
 import { DEFAULT_ALERT_SETTINGS, DEFAULT_STORE_PROFILE } from './constants';
 import { Batch, Product, BatchWithProduct, Category, AlertSetting, StoreProfile as StoreProfileType } from './types';
 import { db } from './services/db';
+import { useAuth } from './contexts/AuthContext';
+import Login from './components/Login';
 
 import Dashboard from './components/Dashboard';
 import StockIntake from './components/StockIntake';
@@ -22,10 +24,26 @@ const getDaysUntilExpiry = (expiryDate: string): number => {
 };
 
 const App: React.FC = () => {
+  const { user, loading: authLoading, signOut } = useAuth();
+  
   // --- UI State ---
   const [activeTab, setActiveTab] = useState<'dashboard' | 'intake' | 'inventory' | 'reports' | 'settings'>('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true); // Global loading state
+
+  // Show login if not authenticated
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center text-slate-400">
+        <Loader2 size={48} className="animate-spin text-blue-600 mb-4" />
+        <p className="font-medium text-slate-600">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
   
   // --- Data State ---
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -166,7 +184,7 @@ const App: React.FC = () => {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-slate-800">
+        <div className="p-4 border-t border-slate-800 space-y-2">
           <button 
             onClick={() => setActiveTab('settings')}
             className={`flex items-center gap-3 px-4 py-3 w-full rounded-xl transition-all ${
@@ -181,6 +199,13 @@ const App: React.FC = () => {
               <p className="text-xs truncate">Settings</p>
             </div>
             <Settings size={16} className="hover:text-white" />
+          </button>
+          <button 
+            onClick={signOut}
+            className="flex items-center gap-3 px-4 py-3 w-full rounded-xl transition-all text-slate-400 hover:bg-slate-800 hover:text-red-400"
+          >
+            <LogOut size={16} />
+            <span className="text-sm font-medium">Sign Out</span>
           </button>
         </div>
       </aside>
@@ -219,7 +244,7 @@ const App: React.FC = () => {
                   <span className="font-medium">{item.label}</span>
                 </button>
               ))}
-              <div className="mt-auto pb-8 border-t border-slate-800 pt-4">
+              <div className="mt-auto pb-8 border-t border-slate-800 pt-4 space-y-2">
                 <button
                   onClick={() => {
                     setActiveTab('settings');
@@ -229,6 +254,16 @@ const App: React.FC = () => {
                 >
                   <Settings size={24} />
                   <span className="font-medium">Store Profile</span>
+                </button>
+                <button
+                  onClick={() => {
+                    signOut();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-4 px-4 py-4 rounded-xl text-lg text-red-400 hover:bg-slate-800"
+                >
+                  <LogOut size={24} />
+                  <span className="font-medium">Sign Out</span>
                 </button>
               </div>
           </div>
